@@ -1,12 +1,14 @@
 float ds = 0.002;
 float r = 2;
-int aliasnum = 15; 
+int aliasnum = 4; 
 
 PVector camera = new PVector(-4,-1,0);
 PVector look = new PVector(4,1,0);
 PVector up = new PVector(0,1,0);
 PVector sun = new PVector(0,4,4);
 float viewAngle = PI/4;
+
+PVector white = new PVector(255, 255, 255);
 
 void setup()
 {
@@ -23,23 +25,23 @@ void draw()
   {
     for (int j=0; j<height; j++)
     {
-      //get vector pointing from camera to pixel
-      PVector focus = look.copy();
-      focus.add(PVector.mult(up, tan(viewAngle)*(height/2.0-j)/width*2));
-      focus.add(PVector.mult(look.cross(up).normalize(), tan(viewAngle)*(i-width/2.0)/width*2));
-      
-      //perturb foc by a small amount aliasnum times, then average the RGB values
+      //perturb foc by a small amount aliasnum ^ 2 times, then average the RGB values
       int r = 0, g = 0, b = 0;
-      for (int k = 0; k < aliasnum; k++)
+      for (int k = 0; k < aliasnum * aliasnum; k++)
       {
-        color c = rayCast(PVector.add(focus, PVector.mult(PVector.random3D(), ds)));
+        //get vector pointing from camera to pixel
+        PVector focus = look.copy();
+        focus.add(PVector.mult(up, tan(viewAngle) * (height / 2.0 - j - float(k % aliasnum) / aliasnum) / width * 2));
+        focus.add(PVector.mult(look.cross(up).normalize(), tan(viewAngle) * (i + float(k / aliasnum) / aliasnum - width / 2.0) / width * 2));
+        
+        color c = rayCast(focus);
         r += c>>16&0xFF;
         g += c>>8&0xFF;
         b += c&0xFF;
       }
-      r /= aliasnum;
-      g /= aliasnum;
-      b /= aliasnum;
+      r /= aliasnum * aliasnum;
+      g /= aliasnum * aliasnum;
+      b /= aliasnum * aliasnum;
       color aliased = color(r, g, b);
       
       //finally draw the pixel
@@ -47,11 +49,12 @@ void draw()
       point(i, j);
     }
   }
+  save("image" + (int)random(10000) + ".png");
 }
 
 color rayCast (PVector focus) //casts a ray, reflects light, returns a color
 {
-  color out;
+  PVector out = new PVector(248, 255, 248);
   boolean hit;
   
   //solve for intersection with sphere
@@ -85,7 +88,7 @@ color rayCast (PVector focus) //casts a ray, reflects light, returns a color
   PVector normal;
   
   if (hit) {
-    normal = point.copy(); //normal vector for phere
+    normal = point.copy(); //normal vector for sphere
   } else {
     normal = up; //normal vector for ground
   }
@@ -96,17 +99,19 @@ color rayCast (PVector focus) //casts a ray, reflects light, returns a color
   //brigthness is proportional to the cosine of the angle between the normal vector and
   //what would the normal vector would have to be to bounce light directly into the camera.
   //different functions of this angle could be used to simulate less or more reflective surfaces.
-  float bright = 255 * abs(normal.dot(PVector.add(focus, lighting))/normal.mag()/PVector.add(focus, lighting).mag());
+  float bright = abs(normal.dot(PVector.add(focus, lighting))/normal.mag()/PVector.add(focus, lighting).mag());
   
   //this part is just to make it look cool
-  int min = 30;
-  int max = 180;
-  //note that the average of three uniform variables is exactly equal to a gaussian. /s
-  if ((random(min, max) +  random(min, max) +  random(min, max)) /3 < bright) {
-    out = color(248, 255, 248);
-  } else {
-    out = color(0, 10, 0);
-  }
+  //int min = 30;
+  //int max = 180;
+  //note that the average of three uniform variables is exactly equal to a gaussian. (jk)
+  //if ((random(min, max) +  random(min, max) +  random(min, max)) /3 < bright) {
+  //  out = color(248, 255, 248);
+  //} else {
+  //  out = color(0, 10, 0);
+  //}
+  out.mult(bright);
+  out.add(PVector.mult(white, pow(sin(bright * PI / 2), 20)));
   
-  return out;
+  return color(out.x, out.y, out.z);
 }
