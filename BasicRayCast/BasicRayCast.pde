@@ -1,4 +1,4 @@
-float ds = 0.002;
+float ds = 20;
 float r = 2;
 int aliasnum = 4; 
 
@@ -110,8 +110,15 @@ color rayCast (PVector focus) //casts a ray, reflects light, returns a color
   //} else {
   //  out = color(0, 10, 0);
   //}
-  out.mult(bright);
-  out.add(PVector.mult(white, pow(sin(bright * PI / 2), 20)));
+  
+  // Normal lighting with specular highlight
+  //out.mult(bright);
+  //out.add(PVector.mult(white, pow(sin(bright * PI / 2), 20)));
+  
+  // Perlin noise coloring
+  if (bright < noise(focus.x * ds + 37, focus.y * ds + 65.321, focus.z * ds - 472.3)) {
+    out.mult(0.1);
+  }
   
   return color(out.x, out.y, out.z);
 }
